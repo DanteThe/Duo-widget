@@ -88,7 +88,7 @@ if you want to see the number.
 
 # Peanut Butter Cup widget
 
-A second, just-for-fun widget: a 3D peanut butter cup floating over a dark maroon
+A second, just-for-fun widget: a 3D peanut butter cup floating over a very dark maroon
 background.
 
 ![Peanut butter cup widget preview](images/peanut-butter-cup-preview.png)

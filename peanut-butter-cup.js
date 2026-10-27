@@ -22,8 +22,8 @@ const REFRESH_MINUTES = 30
 const PHOTO_PATTERN = /^cup(\.[a-z]+)*\.(png|jpe?g|heic)$/i
 
 // Colours
-const BG_TOP = "#7a1424"
-const BG_BOTTOM = "#3d0610"
+const BG_TOP = "#2e0508"
+const BG_BOTTOM = "#1c0201"
 const CHOCOLATE = [112, 64, 33]     // side of the cup
 const TOP_RIM = "#4a2914"
 const TOP_FILL = "#6b3b1d"
