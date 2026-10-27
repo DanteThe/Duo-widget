@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Acid Pad">
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Acid Pad</title>
+<style>
+  :root {
+    --bg: #050505;
+    --panel: #141414;
+    --line: #2c2c2c;
+    --text: #f4f4f4;
+    --muted: #8c8c8c;
+    --c808: #ff2222;   /* screech row */
+    --reese: #f4f4f4;  /* buzz row */
+    --wobble: #9a9a9a; /* drums row */
+    --fx: #ff5a1f;     /* fx row */
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    touch-action: none; overflow: hidden; overscroll-behavior: none;
+  }
+  #app {
+    height: 100%; display: flex; flex-direction: column; gap: 10px;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+             max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  /* Top bar */
+  header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0 auto 0 0; letter-spacing: .5px; }
+  .group { display: flex; align-items: center; gap: 4px; background: var(--panel);
+           border: 1px solid var(--line); border-radius: 12px; padding: 4px 6px; }
+  .group span.label { color: var(--muted); font-size: 11px; text-transform: uppercase; margin-right: 2px; }
+  .group output { min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+  button.small { background: #222; color: var(--text); border: 0; border-radius: 8px;
+                 width: 30px; height: 28px; font: inherit; font-size: 16px; }
+  button.small:active { background: #3a3a3a; }
+  #meter { width: 60px; height: 8px; border-radius: 4px; background: #222; overflow: hidden; }
+  #meter div { height: 100%; width: 0; background: linear-gradient(90deg, #f4f4f4, var(--c808)); }
+
+  /* Main area: pads + effects. Folded (tall screen): stacked. */
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  #pads { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+          grid-template-rows: repeat(4, 1fr); gap: 8px; }
+  .pad {
+    --c: var(--c808);
+    position: relative; border: 0; border-radius: 16px; color: var(--text); font: inherit;
+    background: color-mix(in srgb, var(--c) 16%, #0b0b0b);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent);
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
+    padding: 8px 10px; text-align: left; transition: transform .05s, background .05s;
+  }
+  .pad small { color: color-mix(in srgb, var(--c) 70%, white); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+  .pad b { font-size: 16px; }
+  .pad.on { background: var(--c); color: #050505; transform: scale(.96);
+            box-shadow: 0 0 22px color-mix(in srgb, var(--c) 70%, transparent); }
+  .pad.on small { color: #050505; }
+  .row-reese { --c: var(--reese); }
+  .row-wobble { --c: var(--wobble); }
+  .row-fx { --c: var(--fx); }
+
+  aside { display: flex; gap: 10px; }
+  #xy {
+    position: relative; flex: 1; height: 130px; border-radius: 16px; background:
+      radial-gradient(circle at 50% 50%, #1e1e1e, #0d0d0d);
+    border: 1px solid var(--line); overflow: hidden;
+  }
+  #xy::before { content: "FILTER"; position: absolute; left: 10px; top: 8px; font-size: 10px; color: var(--muted); letter-spacing: .8px; }
+  #xy::after { content: "cutoff →   ↑ resonance"; position: absolute; right: 10px; bottom: 8px; font-size: 10px; color: var(--muted); }
+  #dot { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+         background: var(--text); box-shadow: 0 0 18px var(--c808); pointer-events: none; }
+  .controls { display: flex; flex-direction: column; gap: 8px; width: 46%; }
+  .slider { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; }
+  .slider label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  input[type=range] { width: 100%; accent-color: var(--c808); height: 24px; }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; padding: 6px 0; border-radius: 9px; }
+  .seg button.sel { background: var(--c808); color: #050505; }
+
+  /* Unfolded (wide, near-square screen) or landscape: pads left, effects right. */
+  @media (min-aspect-ratio: 3/4) {
+    main { flex-direction: row; }
+    #pads { flex: none; height: 100%; aspect-ratio: 1; max-width: 66%; }
+    aside { flex: 1; flex-direction: column; min-width: 0; }
+    #xy { height: auto; flex: 1; }
+    .controls { width: 100%; }
+    .pad b { font-size: 20px; }
+  }
+
+  #start {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; background: rgba(5, 5, 5, .94); text-align: center; padding: 24px;
+  }
+  #start b { font-size: 28px; }
+  #start p { color: var(--muted); margin: 0; max-width: 320px; font-weight: 500; }
+  #start.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>ACID PAD</h1>
+    <div class="group"><span class="label">Key</span>
+      <button class="small" id="keyDown">‹</button><output id="key">C</output><button class="small" id="keyUp">›</button>
+    </div>
+    <div class="group"><span class="label">Oct</span>
+      <button class="small" id="octDown">−</button><output id="oct">2</output><button class="small" id="octUp">+</button>
+    </div>
+    <div class="group"><span class="label">BPM</span>
+      <button class="small" id="bpmDown">−</button><output id="bpm">140</output><button class="small" id="bpmUp">+</button>
+    </div>
+    <div id="meter"><div></div></div>
+  </header>
+
+  <main>
+    <section id="pads"></section>
+    <aside>
+      <div id="xy"><div id="dot"></div></div>
+      <div class="controls">
+        <div class="seg" id="rate">
+          <button data-div="2">1/8</button><button data-div="3">1/8T</button>
+          <button data-div="4" class="sel">1/16</button><button data-div="8">1/32</button>
+        </div>
+        <div class="slider"><label>Drive <span id="driveVal">70%</span></label>
+          <input type="range" id="drive" min="0" max="100" value="70"></div>
+        <div class="slider"><label>Volume <span id="volVal">80%</span></label>
+          <input type="range" id="vol" min="0" max="100" value="80"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="start">
+  <b>🔊 Tap to start</b>
+  <p>Hold a pad to play. Hold STOP to cut everything to silence. Drag on the filter pad while you play. Best with headphones or a speaker.</p>
+</div>
+
+<script>
+"use strict"
+
+// ---------- Music settings ----------
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+const INTERVALS = [0, 3, 5, 7] // root, minor third, fourth, fifth
+const state = { root: 0, octave: 2, bpm: 140, division: 4 } // division = chops per beat
+
+const ROWS = [
+  { id: "screech", cls: "", label: "Screech", kind: "note" },
+  { id: "buzz", cls: "row-reese", label: "Buzz", kind: "note" },
+  { id: "drums", cls: "row-wobble", label: "Drums", kind: "fx", names: ["Kick", "Clap", "Crack", "Clang"] },
+  { id: "fx", cls: "row-fx", label: "FX", kind: "fx", names: ["Glitch", "Stop", "Dive", "Static"] },
+]
+
+function noteFreq(row, col) {
+  const midi = 12 * (state.octave + 1) + state.root + INTERVALS[col]
+  return 440 * Math.pow(2, (midi - 69) / 12)
+}
+
+function noteName(col) {
+  return NOTE_NAMES[(state.root + INTERVALS[col]) % 12]
+}
+
+// ---------- Audio engine ----------
+let ctx = null
+let bus, filter, shaper, comp, mute, master, limiter, analyser
+let idleTimer = null
+let activeVoices = 0
+
+function makeDriveCurve(amount) {
+  const k = 1 + amount * 30
+  const curve = new Float32Array(1024)
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1
+    curve[i] = Math.tanh(k * x) / Math.tanh(k)
+  }
+  return curve
+}
+
+function initAudio() {
+  if (ctx) return
+  // Play even when the ringer switch is on silent (Safari 16.4+).
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback" } catch (e) {}
+  ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" })
+  bus = ctx.createGain()
+  filter = ctx.createBiquadFilter()
+  filter.type = "lowpass"
+  shaper = ctx.createWaveShaper()
+  shaper.oversample = "4x"
+  comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = -14
+  comp.ratio.value = 6
+  mute = ctx.createGain()
+  master = ctx.createGain()
+  // Final soft limiter so the loudest hits never go past full volume.
+  limiter = ctx.createWaveShaper()
+  limiter.curve = makeDriveCurve(0.03)
+  analyser = ctx.createAnalyser()
+  analyser.fftSize = 512
+  bus.connect(filter).connect(shaper).connect(comp).connect(mute).connect(master).connect(limiter).connect(analyser).connect(ctx.destination)
+  applyDrive()
+  applyVolume()
+  applyXY()
+  meterLoop()
+}
+
+// Wakes the audio engine, and lets it sleep again after a quiet spell to save battery.
+function wake() {
+  initAudio()
+  if (ctx.state !== "running") ctx.resume().then(meterLoop)
+  clearTimeout(idleTimer)
+}
+
+function voiceStarted() { activeVoices++; wake() }
+function voiceEnded() {
+  activeVoices = Math.max(0, activeVoices - 1)
+  if (activeVoices === 0) {
+    clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { if (activeVoices === 0 && ctx) ctx.suspend() }, 20000)
+  }
+}
+
+function env(gainNode, t, peak, attack) {
+  gainNode.gain.setValueAtTime(0.0001, t)
+  gainNode.gain.exponentialRampToValueAtTime(peak, t + attack)
+}
+
+function release(gainNode, t, time) {
+  gainNode.gain.cancelScheduledValues(t)
+  gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.0001), t)
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, t + time)
+}
+
+function stopAll(nodes, when) {
+  for (const n of nodes) { try { n.stop(when) } catch (e) {} }
+}
+
+// Shared helpers for the harsh sounds.
+let noiseBuffer = null
+function noise() {
+  if (!noiseBuffer) {
+    noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
+    const data = noiseBuffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+  }
+  const src = ctx.createBufferSource()
+  src.buffer = noiseBuffer
+  src.loop = true
+  return src
+}
+
+function fuzz(amount) {
+  const ws = ctx.createWaveShaper()
+  ws.curve = makeDriveCurve(amount)
+  ws.oversample = "4x"
+  return ws
+}
+
+// Bit-crusher: squashes the wave into a few steps for a gritty digital sound.
+function crusher(steps) {
+  const ws = ctx.createWaveShaper()
+  const curve = new Float32Array(1024)
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1
+    curve[i] = Math.round(x * steps) / steps
+  }
+  ws.curve = curve
+  return ws
+}
+
+function chopRate() { return (state.bpm / 60) * state.division }
+
+function oneShot(nodes, length) {
+  const t = ctx.currentTime
+  nodes.forEach((n) => n.start(t))
+  stopAll(nodes, t + length)
+  voiceStarted()
+  nodes[0].onended = voiceEnded
+  return null
+}
+
+// Held acid screech: detuned saws through a screaming resonant filter that
+// snaps shut, then heavy fuzz. Plays two octaves above the bass.
+function startScreech(f) {
+  const t = ctx.currentTime
+  f *= 4
+  const g = ctx.createGain(); env(g, t, 0.3, 0.004)
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 20
+  lp.frequency.setValueAtTime(7000, t)
+  lp.frequency.exponentialRampToValueAtTime(1100, t + 0.22)
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 7
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 600
+  lfo.connect(lfoGain).connect(lp.frequency)
+  const oscs = [0, 22].map((cents) => {
+    const o = ctx.createOscillator(); o.type = "sawtooth"; o.detune.value = cents
+    o.frequency.setValueAtTime(f * 1.07, t)
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.06)
+    o.connect(lp); return o
+  })
+  lp.connect(fuzz(0.9)).connect(g); g.connect(bus)
+  const all = [...oscs, lfo]
+  all.forEach((o) => o.start(t))
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.08); stopAll(all, now + 0.1); voiceEnded() }
+}
+
+// Held buzz bass: square + saw, fuzzed and chopped in time with the BPM.
+function startBuzz(f) {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.5, 0.004)
+  const sq = ctx.createOscillator(); sq.type = "square"; sq.frequency.value = f
+  const saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = f * 1.006
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200; lp.Q.value = 4
+  // The gate swings between 0 and 1: 0.5 plus a square wave of ±0.5.
+  const gate = ctx.createGain(); gate.gain.value = 0.5
+  const chop = ctx.createOscillator(); chop.type = "square"; chop.frequency.value = chopRate()
+  const chopGain = ctx.createGain(); chopGain.gain.value = 0.5
+  chop.connect(chopGain).connect(gate.gain)
+  sq.connect(lp); saw.connect(lp)
+  lp.connect(fuzz(0.85)).connect(gate).connect(g); g.connect(bus)
+  const all = [sq, saw, chop]
+  all.forEach((o) => o.start(t))
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.05); stopAll(all, now + 0.07); voiceEnded() }
+}
+
+// Distorted industrial kick.
+function playKick() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 1, 0.002)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55)
+  const o = ctx.createOscillator(); o.type = "sine"
+  o.frequency.setValueAtTime(190, t)
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.12)
+  o.connect(fuzz(0.75)).connect(g); g.connect(bus)
+  return oneShot([o], 0.6)
+}
+
+// Clap: three quick noise bursts and a short tail.
+function playClap() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); g.gain.value = 0.0001
+  for (const d of [0, 0.011, 0.022]) {
+    g.gain.setValueAtTime(0.9, t + d)
+    g.gain.exponentialRampToValueAtTime(0.1, t + d + 0.009)
+  }
+  g.gain.setValueAtTime(0.7, t + 0.033)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3)
+  const src = noise()
+  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1300; bp.Q.value = 1.2
+  src.connect(bp).connect(fuzz(0.5)).connect(g); g.connect(bus)
+  return oneShot([src], 0.35)
+}
+
+// Crack: a snappy, overdriven snare.
+function playCrack() {
+  const t = ctx.currentTime
+  const ng = ctx.createGain(); env(ng, t, 0.8, 0.002)
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
+  const src = noise()
+  const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1400
+  src.connect(hp).connect(ng)
+  const tg = ctx.createGain(); env(tg, t, 0.7, 0.002)
+  tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.12)
+  const o = ctx.createOscillator(); o.type = "triangle"
+  o.frequency.setValueAtTime(240, t)
+  o.frequency.exponentialRampToValueAtTime(170, t + 0.1)
+  o.connect(tg)
+  const out = fuzz(0.7)
+  ng.connect(out); tg.connect(out); out.connect(bus)
+  return oneShot([src, o], 0.32)
+}
+
+// Clang: clashing square waves that ring like struck metal.
+function playClang() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.35, 0.002)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9)
+  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2400; bp.Q.value = 0.9
+  const oscs = [547, 812, 1173, 1546, 2093].map((fr) => {
+    const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = fr
+    o.connect(bp); return o
+  })
+  bp.connect(fuzz(0.4)).connect(g); g.connect(bus)
+  return oneShot(oscs, 1)
+}
+
+// Held glitch: random crushed blips from the current key, in time with the BPM.
+function startGlitch() {
+  const out = ctx.createGain(); out.gain.value = 0.35
+  const crush = crusher(5)
+  crush.connect(out); out.connect(bus)
+  const blip = () => {
+    const t = ctx.currentTime
+    const col = Math.floor(Math.random() * 4)
+    const f = noteFreq(null, col) * [2, 4, 8][Math.floor(Math.random() * 3)]
+    const g = ctx.createGain(); env(g, t, 1, 0.002)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
+    const o = ctx.createOscillator(); o.type = Math.random() < 0.5 ? "square" : "sawtooth"
+    o.frequency.value = f
+    o.connect(g).connect(crush)
+    o.start(t); o.stop(t + 0.06)
+  }
+  blip()
+  const timer = setInterval(blip, 1000 / chopRate())
+  voiceStarted()
+  return () => {
+    clearInterval(timer)
+    const now = ctx.currentTime
+    release(out, now, 0.03)
+    setTimeout(() => out.disconnect(), 200)
+    voiceEnded()
+  }
+}
+
+// Held stop: cuts everything to silence until you let go.
+function startStop() {
+  mute.gain.setTargetAtTime(0, ctx.currentTime, 0.002)
+  return () => mute.gain.setTargetAtTime(1, ctx.currentTime, 0.002)
+}
+
+// Dive: a fuzzed scream that falls from high to the floor.
+function playDive() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.45, 0.005)
+  g.gain.setValueAtTime(0.45, t + 0.9)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4)
+  const o = ctx.createOscillator(); o.type = "sawtooth"
+  o.frequency.setValueAtTime(2400, t)
+  o.frequency.exponentialRampToValueAtTime(38, t + 1.3)
+  const o2 = ctx.createOscillator(); o2.type = "square"
+  o2.frequency.setValueAtTime(2460, t)
+  o2.frequency.exponentialRampToValueAtTime(39, t + 1.3)
+  const mix = ctx.createGain(); mix.gain.value = 0.6
+  o.connect(mix); o2.connect(mix)
+  mix.connect(fuzz(0.9)).connect(g); g.connect(bus)
+  return oneShot([o, o2], 1.45)
+}
+
+// Held static: crushed noise, like a blown-out speaker.
+function startStatic() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.2, 0.01)
+  const src = noise()
+  const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 350
+  src.connect(crusher(3)).connect(hp).connect(g); g.connect(bus)
+  src.start(t)
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.05); stopAll([src], now + 0.07); voiceEnded() }
+}
+
+function trigger(row, col) {
+  if (row.id === "screech") return startScreech(noteFreq(row, col))
+  if (row.id === "buzz") return startBuzz(noteFreq(row, col))
+  if (row.id === "drums") return [playKick, playClap, playCrack, playClang][col]()
+  return [startGlitch, startStop, playDive, startStatic][col]()
+}
+
+// ---------- Pads ----------
+const padsEl = document.getElementById("pads")
+const padEls = []
+ROWS.forEach((row, r) => {
+  for (let c = 0; c < 4; c++) {
+    const el = document.createElement("button")
+    el.className = `pad ${row.cls}`
+    el.innerHTML = `<small>${row.label}</small><b></b>`
+    padsEl.appendChild(el)
+    padEls.push({ el, row, col: c })
+  }
+})
+
+function updateLabels() {
+  for (const p of padEls) {
+    p.el.querySelector("b").textContent = p.row.kind === "fx" ? p.row.names[p.col] : noteName(p.col)
+  }
+  document.getElementById("key").textContent = NOTE_NAMES[state.root]
+  document.getElementById("oct").textContent = state.octave
+  document.getElementById("bpm").textContent = state.bpm
+}
+
+// Each finger gets its own voice, so several pads can be held at once.
+const held = new Map() // pointerId -> { pad, stop }
+function press(pad, id) {
+  wake()
+  const stop = trigger(pad.row, pad.col)
+  pad.el.classList.add("on")
+  held.set(id, { pad, stop })
+  if (!stop) setTimeout(() => { if (![...held.values()].some((h) => h.pad === pad)) pad.el.classList.remove("on") }, 140)
+}
+function lift(id) {
+  const h = held.get(id)
+  if (!h) return
+  held.delete(id)
+  if (h.stop) h.stop()
+  if (![...held.values()].some((x) => x.pad === h.pad)) h.pad.el.classList.remove("on")
+}
+
+for (const pad of padEls) {
+  pad.el.addEventListener("pointerdown", (e) => {
+    e.preventDefault()
+    pad.el.setPointerCapture(e.pointerId)
+    press(pad, e.pointerId)
+  })
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    pad.el.addEventListener(type, (e) => lift(e.pointerId))
+  }
+}
+
+// Keyboard for testing on a computer: rows 1234 / qwer / asdf / zxcv.
+const KEYS = "1234qwerasdfzxcv"
+const keyHeld = new Set()
+addEventListener("keydown", (e) => {
+  const i = KEYS.indexOf(e.key.toLowerCase())
+  if (i < 0 || keyHeld.has(i)) return
+  keyHeld.add(i); hideStart(); press(padEls[i], "key" + i)
+})
+addEventListener("keyup", (e) => {
+  const i = KEYS.indexOf(e.key.toLowerCase())
+  if (i < 0) return
+  keyHeld.delete(i); lift("key" + i)
+})
+
+// ---------- Top bar ----------
+function bind(id, fn) {
+  document.getElementById(id).addEventListener("pointerdown", (e) => { e.preventDefault(); fn(); updateLabels() })
+}
+bind("keyDown", () => { state.root = (state.root + 11) % 12 })
+bind("keyUp", () => { state.root = (state.root + 1) % 12 })
+bind("octDown", () => { state.octave = Math.max(1, state.octave - 1) })
+bind("octUp", () => { state.octave = Math.min(4, state.octave + 1) })
+bind("bpmDown", () => { state.bpm = Math.max(60, state.bpm - 5) })
+bind("bpmUp", () => { state.bpm = Math.min(200, state.bpm + 5) })
+
+document.querySelectorAll("#rate button").forEach((b) => {
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault()
+    document.querySelectorAll("#rate button").forEach((x) => x.classList.remove("sel"))
+    b.classList.add("sel")
+    state.division = Number(b.dataset.div)
+  })
+})
+
+// ---------- Effects ----------
+const driveEl = document.getElementById("drive")
+const volEl = document.getElementById("vol")
+function applyDrive() {
+  document.getElementById("driveVal").textContent = driveEl.value + "%"
+  if (shaper) shaper.curve = makeDriveCurve(driveEl.value / 100)
+}
+function applyVolume() {
+  document.getElementById("volVal").textContent = volEl.value + "%"
+  if (master) master.gain.setTargetAtTime(Math.pow(volEl.value / 100, 2) * 1.2, ctx.currentTime, 0.02)
+}
+driveEl.addEventListener("input", applyDrive)
+volEl.addEventListener("input", applyVolume)
+
+// XY filter pad: left/right = cutoff, up/down = resonance.
+const xyEl = document.getElementById("xy")
+const dotEl = document.getElementById("dot")
+const xy = { x: 1, y: 0.15 }
+function applyXY() {
+  // Keep the whole dot inside the pad, even at the edges.
+  dotEl.style.left = `calc(14px + ${xy.x} * (100% - 28px))`
+  dotEl.style.top = `calc(14px + ${1 - xy.y} * (100% - 28px))`
+  if (!filter) return
+  const cutoff = 60 * Math.pow(18000 / 60, xy.x)
+  filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.015)
+  filter.Q.setTargetAtTime(0.7 + xy.y * 16, ctx.currentTime, 0.015)
+}
+function moveXY(e) {
+  const r = xyEl.getBoundingClientRect()
+  xy.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+  xy.y = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height))
+  applyXY()
+}
+xyEl.addEventListener("pointerdown", (e) => { e.preventDefault(); wake(); xyEl.setPointerCapture(e.pointerId); moveXY(e) })
+xyEl.addEventListener("pointermove", (e) => { if (xyEl.hasPointerCapture(e.pointerId)) moveXY(e) })
+// Double-tap the filter pad to open it fully again.
+let lastTap = 0
+xyEl.addEventListener("pointerup", () => {
+  const now = Date.now()
+  if (now - lastTap < 300) { xy.x = 1; xy.y = 0.15; applyXY() }
+  lastTap = now
+})
+
+// Level meter: only animates while the audio engine is awake.
+const meterBar = document.querySelector("#meter div")
+let meterData = null
+function meterLoop() {
+  if (!analyser || ctx.state !== "running") { meterBar.style.width = "0"; return }
+  if (!meterData) meterData = new Float32Array(analyser.fftSize)
+  analyser.getFloatTimeDomainData(meterData)
+  let peak = 0
+  for (const v of meterData) peak = Math.max(peak, Math.abs(v))
+  meterBar.style.width = Math.min(100, peak * 110) + "%"
+  requestAnimationFrame(meterLoop)
+}
+
+// ---------- Start screen ----------
+const startEl = document.getElementById("start")
+function hideStart() { startEl.classList.add("hidden"); wake() }
+startEl.addEventListener("pointerdown", (e) => { e.preventDefault(); hideStart() })
+document.addEventListener("gesturestart", (e) => e.preventDefault())
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) for (const id of [...held.keys()]) lift(id)
+})
+
+updateLabels()
+applyXY()
+</script>
+</body>
+</html>

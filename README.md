@@ -239,3 +239,26 @@ The app lives in the [`bass-pad`](bass-pad) folder. To get a link for it:
   better, or raise **Oct** and **Drive** to make it cut through on the phone.
 - If you hear nothing, check the volume buttons. On older iOS versions the
   ringer switch also needs to be off silent.
+
+---
+
+# Acid Pad app
+
+A harsher companion to Bass Pad, with sounds in the style of distorted,
+industrial hip-hop production: screeching acid synths, buzzing chopped bass,
+blown-out drums and glitch effects. Every sound is synthesized live; no
+samples from any song are used.
+
+![Acid Pad folded (left) and unfolded (right)](images/acid-pad-preview.png)
+
+- **Screech:** squealing, fuzzed acid lead (held).
+- **Buzz:** distorted bass chopped in time with the BPM (held).
+- **Drums:** distorted kick, clap, crack (snare) and metallic clang.
+- **FX:** **Glitch** (random crushed blips in key, in time), **Stop** (hold to
+  cut everything to silence, let go to slam back in), **Dive** (falling
+  scream) and **Static** (blown-speaker noise).
+- **Chop speed** (1/8, 1/8 triplet, 1/16, 1/32) sets how fast Buzz and Glitch
+  chop. Key, octave, BPM, the filter pad, Drive and Volume work like in Bass Pad.
+
+Open it at `https://dantethe.github.io/Duo-widget/acid-pad/` in Safari, then
+**Share** → **Add to Home Screen**.
