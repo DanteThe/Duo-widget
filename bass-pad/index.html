@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bass Pad">
+<meta name="theme-color" content="#1c0201">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Bass Pad</title>
+<style>
+  :root {
+    --bg: #1c0201;
+    --panel: #2a0609;
+    --line: #4a1218;
+    --text: #f6e3e5;
+    --muted: #b98a90;
+    --c808: #e0324f;
+    --reese: #b05cff;
+    --wobble: #2fd6a0;
+    --fx: #ffb02e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    touch-action: none; overflow: hidden; overscroll-behavior: none;
+  }
+  #app {
+    height: 100%; display: flex; flex-direction: column; gap: 10px;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+             max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  /* Top bar */
+  header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0 auto 0 0; letter-spacing: .5px; }
+  .group { display: flex; align-items: center; gap: 4px; background: var(--panel);
+           border: 1px solid var(--line); border-radius: 12px; padding: 4px 6px; }
+  .group span.label { color: var(--muted); font-size: 11px; text-transform: uppercase; margin-right: 2px; }
+  .group output { min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+  button.small { background: #3a0b10; color: var(--text); border: 0; border-radius: 8px;
+                 width: 30px; height: 28px; font: inherit; font-size: 16px; }
+  button.small:active { background: #5a1520; }
+  #meter { width: 60px; height: 8px; border-radius: 4px; background: #3a0b10; overflow: hidden; }
+  #meter div { height: 100%; width: 0; background: linear-gradient(90deg, var(--wobble), var(--fx), var(--c808)); }
+
+  /* Main area: pads + effects. Folded (tall screen): stacked. */
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  #pads { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+          grid-template-rows: repeat(4, 1fr); gap: 8px; }
+  .pad {
+    --c: var(--c808);
+    position: relative; border: 0; border-radius: 16px; color: var(--text); font: inherit;
+    background: color-mix(in srgb, var(--c) 22%, #160203);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent);
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
+    padding: 8px 10px; text-align: left; transition: transform .05s, background .05s;
+  }
+  .pad small { color: color-mix(in srgb, var(--c) 70%, white); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+  .pad b { font-size: 16px; }
+  .pad.on { background: var(--c); transform: scale(.96);
+            box-shadow: 0 0 22px color-mix(in srgb, var(--c) 70%, transparent); }
+  .pad.on small { color: #fff; }
+  .row-reese { --c: var(--reese); }
+  .row-wobble { --c: var(--wobble); }
+  .row-fx { --c: var(--fx); }
+
+  aside { display: flex; gap: 10px; }
+  #xy {
+    position: relative; flex: 1; height: 130px; border-radius: 16px; background:
+      radial-gradient(circle at 50% 50%, #3a0b10, #220407);
+    border: 1px solid var(--line); overflow: hidden;
+  }
+  #xy::before { content: "FILTER"; position: absolute; left: 10px; top: 8px; font-size: 10px; color: var(--muted); letter-spacing: .8px; }
+  #xy::after { content: "cutoff →   ↑ resonance"; position: absolute; right: 10px; bottom: 8px; font-size: 10px; color: var(--muted); }
+  #dot { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+         background: var(--text); box-shadow: 0 0 18px var(--c808); pointer-events: none; }
+  .controls { display: flex; flex-direction: column; gap: 8px; width: 46%; }
+  .slider { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; }
+  .slider label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  input[type=range] { width: 100%; accent-color: var(--c808); height: 24px; }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; padding: 6px 0; border-radius: 9px; }
+  .seg button.sel { background: var(--wobble); color: #04150f; }
+
+  /* Unfolded (wide, near-square screen) or landscape: pads left, effects right. */
+  @media (min-aspect-ratio: 3/4) {
+    main { flex-direction: row; }
+    #pads { flex: none; height: 100%; aspect-ratio: 1; max-width: 66%; }
+    aside { flex: 1; flex-direction: column; min-width: 0; }
+    #xy { height: auto; flex: 1; }
+    .controls { width: 100%; }
+    .pad b { font-size: 20px; }
+  }
+
+  #start {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; background: rgba(20, 2, 3, .92); text-align: center; padding: 24px;
+  }
+  #start b { font-size: 28px; }
+  #start p { color: var(--muted); margin: 0; max-width: 320px; font-weight: 500; }
+  #start.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>BASS PAD</h1>
+    <div class="group"><span class="label">Key</span>
+      <button class="small" id="keyDown">‹</button><output id="key">C</output><button class="small" id="keyUp">›</button>
+    </div>
+    <div class="group"><span class="label">Oct</span>
+      <button class="small" id="octDown">−</button><output id="oct">2</output><button class="small" id="octUp">+</button>
+    </div>
+    <div class="group"><span class="label">BPM</span>
+      <button class="small" id="bpmDown">−</button><output id="bpm">140</output><button class="small" id="bpmUp">+</button>
+    </div>
+    <div id="meter"><div></div></div>
+  </header>
+
+  <main>
+    <section id="pads"></section>
+    <aside>
+      <div id="xy"><div id="dot"></div></div>
+      <div class="controls">
+        <div class="seg" id="rate">
+          <button data-div="1">1/4</button><button data-div="2" class="sel">1/8</button>
+          <button data-div="3">1/8T</button><button data-div="4">1/16</button>
+        </div>
+        <div class="slider"><label>Drive <span id="driveVal">40%</span></label>
+          <input type="range" id="drive" min="0" max="100" value="40"></div>
+        <div class="slider"><label>Volume <span id="volVal">80%</span></label>
+          <input type="range" id="vol" min="0" max="100" value="80"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="start">
+  <b>🔊 Tap to start</b>
+  <p>Hold a pad to play. Drag on the filter pad while you play. Bass sounds best with headphones or a speaker.</p>
+</div>
+
+<script>
+"use strict"
+
+// ---------- Music settings ----------
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+const INTERVALS = [0, 3, 5, 7] // root, minor third, fourth, fifth
+const RATE_NAMES = { 1: "1/4", 2: "1/8", 3: "1/8T", 4: "1/16" }
+const state = { root: 0, octave: 2, bpm: 140, division: 2 }
+
+const ROWS = [
+  { id: "808", cls: "", label: "808", kind: "note" },
+  { id: "reese", cls: "row-reese", label: "Reese", kind: "note" },
+  { id: "wobble", cls: "row-wobble", label: "Wobble", kind: "note" },
+  { id: "fx", cls: "row-fx", label: "FX", kind: "fx", names: ["Air Horn", "Siren", "Sub Drop", "Riser"] },
+]
+
+function noteFreq(row, col) {
+  const midi = 12 * (state.octave + 1) + state.root + INTERVALS[col]
+  return 440 * Math.pow(2, (midi - 69) / 12)
+}
+
+function noteName(col) {
+  return NOTE_NAMES[(state.root + INTERVALS[col]) % 12]
+}
+
+// ---------- Audio engine ----------
+let ctx = null
+let bus, filter, shaper, comp, master, analyser
+let idleTimer = null
+let activeVoices = 0
+
+function makeDriveCurve(amount) {
+  const k = 1 + amount * 30
+  const curve = new Float32Array(1024)
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1
+    curve[i] = Math.tanh(k * x) / Math.tanh(k)
+  }
+  return curve
+}
+
+function initAudio() {
+  if (ctx) return
+  // Play even when the ringer switch is on silent (Safari 16.4+).
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback" } catch (e) {}
+  ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" })
+  bus = ctx.createGain()
+  filter = ctx.createBiquadFilter()
+  filter.type = "lowpass"
+  shaper = ctx.createWaveShaper()
+  shaper.oversample = "4x"
+  comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = -14
+  comp.ratio.value = 6
+  master = ctx.createGain()
+  analyser = ctx.createAnalyser()
+  analyser.fftSize = 512
+  bus.connect(filter).connect(shaper).connect(comp).connect(master).connect(analyser).connect(ctx.destination)
+  applyDrive()
+  applyVolume()
+  applyXY()
+  meterLoop()
+}
+
+// Wakes the audio engine, and lets it sleep again after a quiet spell to save battery.
+function wake() {
+  initAudio()
+  if (ctx.state !== "running") ctx.resume().then(meterLoop)
+  clearTimeout(idleTimer)
+}
+
+function voiceStarted() { activeVoices++; wake() }
+function voiceEnded() {
+  activeVoices = Math.max(0, activeVoices - 1)
+  if (activeVoices === 0) {
+    clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { if (activeVoices === 0 && ctx) ctx.suspend() }, 20000)
+  }
+}
+
+function env(gainNode, t, peak, attack) {
+  gainNode.gain.setValueAtTime(0.0001, t)
+  gainNode.gain.exponentialRampToValueAtTime(peak, t + attack)
+}
+
+function release(gainNode, t, time) {
+  gainNode.gain.cancelScheduledValues(t)
+  gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.0001), t)
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, t + time)
+}
+
+function stopAll(nodes, when) {
+  for (const n of nodes) { try { n.stop(when) } catch (e) {} }
+}
+
+// One-shot 808: a sine that drops in pitch, with a harmonic so phone speakers can hear it.
+function play808(f) {
+  const t = ctx.currentTime
+  const g = ctx.createGain()
+  env(g, t, 0.9, 0.004)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6)
+  const o = ctx.createOscillator()
+  o.type = "sine"
+  o.frequency.setValueAtTime(f * 3.5, t)
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.07)
+  const h = ctx.createOscillator()
+  h.type = "triangle"
+  h.frequency.setValueAtTime(f * 7, t)
+  h.frequency.exponentialRampToValueAtTime(f * 2, t + 0.07)
+  const hg = ctx.createGain()
+  hg.gain.value = 0.25
+  o.connect(g)
+  h.connect(hg).connect(g)
+  g.connect(bus)
+  o.start(t); h.start(t)
+  stopAll([o, h], t + 1.7)
+  voiceStarted()
+  o.onended = voiceEnded
+  return null
+}
+
+// Held Reese: detuned saws with a slow moving filter.
+function startReese(f) {
+  const t = ctx.currentTime
+  const g = ctx.createGain()
+  env(g, t, 0.45, 0.02)
+  const lp = ctx.createBiquadFilter()
+  lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 3
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 0.35
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 350
+  lfo.connect(lfoGain).connect(lp.frequency)
+  const oscs = [-14, 14].map((cents) => {
+    const o = ctx.createOscillator(); o.type = "sawtooth"
+    o.frequency.value = f; o.detune.value = cents
+    o.connect(lp); return o
+  })
+  const sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = f / 2
+  const subGain = ctx.createGain(); subGain.gain.value = 0.6
+  sub.connect(subGain).connect(g)
+  lp.connect(g); g.connect(bus)
+  const all = [...oscs, sub, lfo]
+  all.forEach((o) => o.start(t))
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.25); stopAll(all, now + 0.3); voiceEnded() }
+}
+
+// Held wobble: saw + square through a resonant filter swept in time with the BPM.
+function startWobble(f) {
+  const t = ctx.currentTime
+  const g = ctx.createGain()
+  env(g, t, 0.5, 0.01)
+  const lp = ctx.createBiquadFilter()
+  // The sweep goes from about 150 Hz up to 3 kHz; it must never dip below 0 Hz.
+  lp.type = "lowpass"; lp.frequency.value = 1550; lp.Q.value = 9
+  const lfo = ctx.createOscillator(); lfo.type = "sine"
+  const beats = { 1: 1, 2: 2, 3: 3, 4: 4 }[state.division]
+  lfo.frequency.value = (state.bpm / 60) * beats
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 1400
+  lfo.connect(lfoGain).connect(lp.frequency)
+  const saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = f
+  const sq = ctx.createOscillator(); sq.type = "square"; sq.frequency.value = f / 2
+  const sqGain = ctx.createGain(); sqGain.gain.value = 0.5
+  saw.connect(lp); sq.connect(sqGain).connect(lp)
+  lp.connect(g); g.connect(bus)
+  const all = [saw, sq, lfo]
+  all.forEach((o) => o.start(t))
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.12); stopAll(all, now + 0.15); voiceEnded() }
+}
+
+// Classic air horn: bright detuned saws in a "baa-ba-ba-baaa" rhythm.
+function playAirHorn() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); g.gain.value = 0.0001
+  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1600; bp.Q.value = 0.8
+  const oscs = [466, 470, 233.5].map((fr) => {
+    const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = fr
+    o.connect(bp); return o
+  })
+  bp.connect(g); g.connect(bus)
+  const hits = [[0, 0.2], [0.26, 0.09], [0.4, 0.09], [0.54, 0.7]]
+  for (const [start, len] of hits) {
+    g.gain.setValueAtTime(0.0001, t + start)
+    g.gain.exponentialRampToValueAtTime(0.35, t + start + 0.015)
+    g.gain.setValueAtTime(0.35, t + start + len - 0.03)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + len)
+  }
+  oscs.forEach((o) => o.start(t))
+  stopAll(oscs, t + 1.3)
+  voiceStarted()
+  oscs[0].onended = voiceEnded
+  return null
+}
+
+// Held dub siren: a square wave whose pitch swings up and down.
+function startSiren() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.22, 0.02)
+  const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = 700
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 4.5
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 260
+  lfo.connect(lfoGain).connect(o.frequency)
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2500
+  o.connect(lp).connect(g); g.connect(bus)
+  o.start(t); lfo.start(t)
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.2); stopAll([o, lfo], now + 0.25); voiceEnded() }
+}
+
+// One-shot sub drop: a sine sliding down into the floor.
+function playSubDrop() {
+  const t = ctx.currentTime
+  const g = ctx.createGain(); env(g, t, 0.9, 0.01)
+  g.gain.setValueAtTime(0.9, t + 1.2)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2)
+  const o = ctx.createOscillator(); o.type = "sine"
+  o.frequency.setValueAtTime(180, t)
+  o.frequency.exponentialRampToValueAtTime(32, t + 1.8)
+  const h = ctx.createOscillator(); h.type = "triangle"
+  h.frequency.setValueAtTime(360, t)
+  h.frequency.exponentialRampToValueAtTime(64, t + 1.8)
+  const hg = ctx.createGain(); hg.gain.value = 0.3
+  o.connect(g); h.connect(hg).connect(g); g.connect(bus)
+  o.start(t); h.start(t)
+  stopAll([o, h], t + 2.3)
+  voiceStarted()
+  o.onended = voiceEnded
+  return null
+}
+
+// Held riser: white noise swept upwards while you hold the pad.
+let noiseBuffer = null
+function startRiser() {
+  const t = ctx.currentTime
+  if (!noiseBuffer) {
+    noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
+    const data = noiseBuffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+  }
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer; src.loop = true
+  const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2.5
+  bp.frequency.setValueAtTime(250, t)
+  bp.frequency.exponentialRampToValueAtTime(9000, t + 4)
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(0.5, t + 4)
+  src.connect(bp).connect(g); g.connect(bus)
+  src.start(t)
+  voiceStarted()
+  return () => { const now = ctx.currentTime; release(g, now, 0.15); stopAll([src], now + 0.2); voiceEnded() }
+}
+
+function trigger(row, col) {
+  if (row.id === "808") return play808(noteFreq(row, col))
+  if (row.id === "reese") return startReese(noteFreq(row, col))
+  if (row.id === "wobble") return startWobble(noteFreq(row, col))
+  return [playAirHorn, startSiren, playSubDrop, startRiser][col]()
+}
+
+// ---------- Pads ----------
+const padsEl = document.getElementById("pads")
+const padEls = []
+ROWS.forEach((row, r) => {
+  for (let c = 0; c < 4; c++) {
+    const el = document.createElement("button")
+    el.className = `pad ${row.cls}`
+    el.innerHTML = `<small>${row.label}</small><b></b>`
+    padsEl.appendChild(el)
+    padEls.push({ el, row, col: c })
+  }
+})
+
+function updateLabels() {
+  for (const p of padEls) {
+    p.el.querySelector("b").textContent = p.row.kind === "fx" ? p.row.names[p.col] : noteName(p.col)
+  }
+  document.getElementById("key").textContent = NOTE_NAMES[state.root]
+  document.getElementById("oct").textContent = state.octave
+  document.getElementById("bpm").textContent = state.bpm
+}
+
+// Each finger gets its own voice, so several pads can be held at once.
+const held = new Map() // pointerId -> { pad, stop }
+function press(pad, id) {
+  wake()
+  const stop = trigger(pad.row, pad.col)
+  pad.el.classList.add("on")
+  held.set(id, { pad, stop })
+  if (!stop) setTimeout(() => { if (![...held.values()].some((h) => h.pad === pad)) pad.el.classList.remove("on") }, 140)
+}
+function lift(id) {
+  const h = held.get(id)
+  if (!h) return
+  held.delete(id)
+  if (h.stop) h.stop()
+  if (![...held.values()].some((x) => x.pad === h.pad)) h.pad.el.classList.remove("on")
+}
+
+for (const pad of padEls) {
+  pad.el.addEventListener("pointerdown", (e) => {
+    e.preventDefault()
+    pad.el.setPointerCapture(e.pointerId)
+    press(pad, e.pointerId)
+  })
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    pad.el.addEventListener(type, (e) => lift(e.pointerId))
+  }
+}
+
+// Keyboard for testing on a computer: rows 1234 / qwer / asdf / zxcv.
+const KEYS = "1234qwerasdfzxcv"
+const keyHeld = new Set()
+addEventListener("keydown", (e) => {
+  const i = KEYS.indexOf(e.key.toLowerCase())
+  if (i < 0 || keyHeld.has(i)) return
+  keyHeld.add(i); hideStart(); press(padEls[i], "key" + i)
+})
+addEventListener("keyup", (e) => {
+  const i = KEYS.indexOf(e.key.toLowerCase())
+  if (i < 0) return
+  keyHeld.delete(i); lift("key" + i)
+})
+
+// ---------- Top bar ----------
+function bind(id, fn) {
+  document.getElementById(id).addEventListener("pointerdown", (e) => { e.preventDefault(); fn(); updateLabels() })
+}
+bind("keyDown", () => { state.root = (state.root + 11) % 12 })
+bind("keyUp", () => { state.root = (state.root + 1) % 12 })
+bind("octDown", () => { state.octave = Math.max(1, state.octave - 1) })
+bind("octUp", () => { state.octave = Math.min(4, state.octave + 1) })
+bind("bpmDown", () => { state.bpm = Math.max(60, state.bpm - 5) })
+bind("bpmUp", () => { state.bpm = Math.min(200, state.bpm + 5) })
+
+document.querySelectorAll("#rate button").forEach((b) => {
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault()
+    document.querySelectorAll("#rate button").forEach((x) => x.classList.remove("sel"))
+    b.classList.add("sel")
+    state.division = Number(b.dataset.div)
+  })
+})
+
+// ---------- Effects ----------
+const driveEl = document.getElementById("drive")
+const volEl = document.getElementById("vol")
+function applyDrive() {
+  document.getElementById("driveVal").textContent = driveEl.value + "%"
+  if (shaper) shaper.curve = makeDriveCurve(driveEl.value / 100)
+}
+function applyVolume() {
+  document.getElementById("volVal").textContent = volEl.value + "%"
+  if (master) master.gain.setTargetAtTime(Math.pow(volEl.value / 100, 2) * 1.2, ctx.currentTime, 0.02)
+}
+driveEl.addEventListener("input", applyDrive)
+volEl.addEventListener("input", applyVolume)
+
+// XY filter pad: left/right = cutoff, up/down = resonance.
+const xyEl = document.getElementById("xy")
+const dotEl = document.getElementById("dot")
+const xy = { x: 1, y: 0.15 }
+function applyXY() {
+  // Keep the whole dot inside the pad, even at the edges.
+  dotEl.style.left = `calc(14px + ${xy.x} * (100% - 28px))`
+  dotEl.style.top = `calc(14px + ${1 - xy.y} * (100% - 28px))`
+  if (!filter) return
+  const cutoff = 60 * Math.pow(18000 / 60, xy.x)
+  filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.015)
+  filter.Q.setTargetAtTime(0.7 + xy.y * 16, ctx.currentTime, 0.015)
+}
+function moveXY(e) {
+  const r = xyEl.getBoundingClientRect()
+  xy.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+  xy.y = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height))
+  applyXY()
+}
+xyEl.addEventListener("pointerdown", (e) => { e.preventDefault(); wake(); xyEl.setPointerCapture(e.pointerId); moveXY(e) })
+xyEl.addEventListener("pointermove", (e) => { if (xyEl.hasPointerCapture(e.pointerId)) moveXY(e) })
+// Double-tap the filter pad to open it fully again.
+let lastTap = 0
+xyEl.addEventListener("pointerup", () => {
+  const now = Date.now()
+  if (now - lastTap < 300) { xy.x = 1; xy.y = 0.15; applyXY() }
+  lastTap = now
+})
+
+// Level meter: only animates while the audio engine is awake.
+const meterBar = document.querySelector("#meter div")
+let meterData = null
+function meterLoop() {
+  if (!analyser || ctx.state !== "running") { meterBar.style.width = "0"; return }
+  if (!meterData) meterData = new Float32Array(analyser.fftSize)
+  analyser.getFloatTimeDomainData(meterData)
+  let peak = 0
+  for (const v of meterData) peak = Math.max(peak, Math.abs(v))
+  meterBar.style.width = Math.min(100, peak * 110) + "%"
+  requestAnimationFrame(meterLoop)
+}
+
+// ---------- Start screen ----------
+const startEl = document.getElementById("start")
+function hideStart() { startEl.classList.add("hidden"); wake() }
+startEl.addEventListener("pointerdown", (e) => { e.preventDefault(); hideStart() })
+document.addEventListener("gesturestart", (e) => e.preventDefault())
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) for (const id of [...held.keys()]) lift(id)
+})
+
+updateLabels()
+applyXY()
+</script>
+</body>
+</html>

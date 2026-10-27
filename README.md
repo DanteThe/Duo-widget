@@ -197,3 +197,45 @@ again any time to replace or remove the picture.
 
 You can also save a picture with "pepper" anywhere in its name (like
 `Dr. Pepper.png`) in the **Scriptable** folder in the Files app.
+
+---
+
+# Bass Pad app
+
+A DJ bass pad you play with your fingers. It's a web app, so there's nothing
+to install from the App Store: open it in Safari and add it to your home
+screen, and it opens full-screen like a normal app.
+
+![Bass Pad folded (left) and unfolded (right)](images/bass-pad-preview.png)
+
+- **16 pads:** 808 booms, Reese bass, wobble bass (in time with the BPM), and
+  FX (air horn, dub siren, sub drop, noise riser).
+- **Key, octave and BPM** controls at the top; every note pad follows the key.
+- **Filter pad:** drag left/right for cutoff and up/down for resonance while
+  you play. Double-tap it to open the filter fully again.
+- **Wobble speed** (1/4, 1/8, 1/8 triplet, 1/16), **Drive** and **Volume**.
+- **Multi-touch:** hold several pads at once.
+- **Fits the screen:** folded, the pads stack above the effects; unfolded (or
+  sideways), the pads sit on the left with the effects on the right.
+
+Every sound is generated live in the browser, so there are no sample files and
+no internet needed after it loads. The audio engine goes to sleep after 20
+seconds of silence to save battery.
+
+## Open it on your phone
+
+The app lives in the [`bass-pad`](bass-pad) folder. To get a link for it:
+
+1. On GitHub, open this repo → **Settings** → **Pages**.
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**,
+   pick **master** and **/ (root)**, and tap **Save**.
+3. After a minute, the app is at
+   `https://dantethe.github.io/Duo-widget/bass-pad/`.
+4. Open that link in **Safari** → **Share** → **Add to Home Screen**.
+
+## Tips
+
+- iPhone speakers can't play very deep bass. Headphones or a speaker sound much
+  better, or raise **Oct** and **Drive** to make it cut through on the phone.
+- If you hear nothing, check the volume buttons. On older iOS versions the
+  ringer switch also needs to be off silent.
