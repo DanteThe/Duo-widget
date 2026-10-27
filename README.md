@@ -189,6 +189,6 @@ as the peanut butter cup widget. Without a photo it draws a plain burgundy can
    tap **Share** → **Save to Files**.
 2. Save it in **iCloud Drive → Scriptable** (or **On My iPhone → Scriptable**)
    and name it **drpepper.png**. Names like `Dr Pepper.png` or
-   `dr-pepper.jpg` work too.
+   `dr-pepper.jpg` work too: any picture with "pepper" in its name.
 
 Run the script in Scriptable to check: the log says which picture it's using.

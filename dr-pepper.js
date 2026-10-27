@@ -19,9 +19,10 @@
 // 30 minutes, and iOS may space them out further.
 
 const REFRESH_MINUTES = 30
-// Any file named like drpepper.png, Dr Pepper.PNG, dr-pepper.jpg or
-// dr_pepper.heic.
-const PHOTO_PATTERN = /^dr[-_ ]?pepper(\.[a-z]+)*\.(png|jpe?g|heic)$/i
+// Any picture with "pepper" in its name, like drpepper.png, Dr. Pepper.PNG,
+// dr-pepper.jpg, my pepper photo.webp or IMG_1234 pepper.heic.
+const PHOTO_PATTERN = /pepper/i
+const PICTURE_TYPES = /\.(png|jpe?g|heic|heif|webp|gif|tiff?)$/i
 
 // Colours
 const BG_TOP = "#2e0508"
@@ -205,7 +206,7 @@ async function loadPhoto() {
   for (const [label, fm] of places) {
     let names = []
     try { names = fm.listContents(fm.documentsDirectory()) } catch (e) {}
-    const images = names.filter((n) => /\.(png|jpe?g|heic)$/i.test(n))
+    const images = names.filter((n) => PICTURE_TYPES.test(n))
     log(`${label}: ${images.length ? images.join(", ") : "no pictures"}`)
     const name = images.find((n) => PHOTO_PATTERN.test(n))
     if (!name) continue
@@ -222,7 +223,7 @@ async function loadPhoto() {
       log(`Found ${name} but couldn't open it: ${e}`)
     }
   }
-  log("No drpepper.png found, drawing a can instead")
+  log("No picture with \"pepper\" in its name found, drawing a can instead")
   return null
 }
 
