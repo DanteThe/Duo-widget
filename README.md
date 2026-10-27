@@ -260,5 +260,11 @@ samples from any song are used.
 - **Chop speed** (1/8, 1/8 triplet, 1/16, 1/32) sets how fast Buzz and Glitch
   chop. Key, octave, BPM, the filter pad, Drive and Volume work like in Bass Pad.
 
+- **Your own sounds:** tap **SOUNDS**, tap a pad, and choose an audio file
+  from your phone (MP3, M4A, WAV…). That pad then plays your sound while you
+  hold it, through the same filter, Drive and Stop. Tap the pad again in
+  SOUNDS mode to go back to the built-in sound. Loaded sounds are saved only
+  in the app on your phone; they are never uploaded or added to this repo.
+
 Open it at `https://dantethe.github.io/Duo-widget/acid-pad/` in Safari, then
 **Share** → **Add to Home Screen**.

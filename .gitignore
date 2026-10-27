@@ -28,3 +28,13 @@ dr_pepper.*
 *Pepper*.*
 # Preview images in the repo are fine
 !images/*
+
+# Audio files never go in the repo
+*.mp3
+*.m4a
+*.wav
+*.aif
+*.aiff
+*.caf
+*.flac
+*.ogg

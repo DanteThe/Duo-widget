@@ -105,6 +105,26 @@
   #start b { font-size: 28px; }
   #start p { color: var(--muted); margin: 0; max-width: 320px; font-weight: 500; }
   #start.hidden { display: none; }
+
+  /* Loading your own sounds onto pads */
+  #soundsBtn { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+               padding: 0 12px; height: 38px; font: inherit; font-size: 12px; letter-spacing: .6px; }
+  #soundsBtn.sel { background: var(--c808); color: #050505; border-color: var(--c808); }
+  body.editing .pad { outline: 2px dashed color-mix(in srgb, var(--c) 70%, transparent); outline-offset: -6px; }
+  .pad.custom::after { content: ""; position: absolute; top: 9px; right: 9px; width: 8px; height: 8px;
+                       border-radius: 50%; background: var(--c808); box-shadow: 0 0 8px var(--c808); }
+  .pad b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hint { display: none; color: var(--c808); font-size: 12px; text-align: center; }
+  body.editing #hint { display: block; }
+  #sheet { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+           background: rgba(0, 0, 0, .6); padding: 16px; }
+  #sheet.hidden { display: none; }
+  #sheet .box { width: 100%; max-width: 420px; background: #161616; border: 1px solid var(--line);
+                border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  #sheet .box p { margin: 0 0 4px; color: var(--muted); font-weight: 500; text-align: center; }
+  #sheet .box button { background: #242424; color: var(--text); border: 0; border-radius: 12px;
+                       padding: 14px; font: inherit; font-size: 15px; }
+  #sheet .box button.primary { background: var(--c808); color: #050505; }
 </style>
 </head>
 <body>
@@ -120,8 +140,10 @@
     <div class="group"><span class="label">BPM</span>
       <button class="small" id="bpmDown">−</button><output id="bpm">140</output><button class="small" id="bpmUp">+</button>
     </div>
+    <button id="soundsBtn">SOUNDS</button>
     <div id="meter"><div></div></div>
   </header>
+  <div id="hint">Tap a pad to load your own sound onto it. Tap SOUNDS again when you're done.</div>
 
   <main>
     <section id="pads"></section>
@@ -141,9 +163,19 @@
   </main>
 </div>
 
+<div id="sheet" class="hidden">
+  <div class="box">
+    <p id="sheetText"></p>
+    <button class="primary" id="sheetPick">Choose a sound file</button>
+    <button id="sheetReset">Use the built-in sound</button>
+    <button id="sheetCancel">Cancel</button>
+  </div>
+</div>
+<input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.wav,.aif,.aiff,.caf" hidden>
+
 <div id="start">
   <b>🔊 Tap to start</b>
-  <p>Hold a pad to play. Hold STOP to cut everything to silence. Drag on the filter pad while you play. Best with headphones or a speaker.</p>
+  <p>Hold a pad to play. Hold STOP to cut everything to silence. Tap SOUNDS to load your own sound files onto pads. Best with headphones or a speaker.</p>
 </div>
 
 <script>
@@ -211,6 +243,7 @@ function initAudio() {
   applyVolume()
   applyXY()
   meterLoop()
+  decodeAll()
 }
 
 // Wakes the audio engine, and lets it sleep again after a quiet spell to save battery.
@@ -458,7 +491,87 @@ function startStatic() {
   return () => { const now = ctx.currentTime; release(g, now, 0.05); stopAll([src], now + 0.07); voiceEnded() }
 }
 
+// ---------- Your own sounds ----------
+// Sounds you load are kept in this browser on your phone (IndexedDB) and are
+// never uploaded anywhere.
+const samples = {} // pad index -> { name, data: ArrayBuffer, buffer: AudioBuffer }
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("acid-pad", 1)
+    req.onupgradeneeded = () => req.result.createObjectStore("samples")
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function dbRun(mode, fn) {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("samples", mode)
+    const result = fn(tx.objectStore("samples"))
+    tx.oncomplete = () => resolve(result && result.result)
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function loadSavedSamples() {
+  try {
+    const db = await openDb()
+    await new Promise((resolve) => {
+      const tx = db.transaction("samples", "readonly")
+      const req = tx.objectStore("samples").openCursor()
+      req.onsuccess = () => {
+        const cursor = req.result
+        if (!cursor) return resolve()
+        samples[cursor.key] = { name: cursor.value.name, data: cursor.value.data }
+        cursor.continue()
+      }
+      req.onerror = () => resolve()
+    })
+  } catch (e) {}
+  updateLabels()
+}
+
+// Audio can only be decoded once the audio engine exists.
+async function decodeSample(index) {
+  const s = samples[index]
+  if (!s || s.buffer || !ctx) return
+  try {
+    s.buffer = await ctx.decodeAudioData(s.data.slice(0))
+  } catch (e) {
+    alert(`Couldn't play "${s.name}". Try an MP3, M4A or WAV file.`)
+    delete samples[index]
+    dbRun("readwrite", (store) => store.delete(index))
+    updateLabels()
+  }
+}
+
+function decodeAll() { Object.keys(samples).forEach((i) => decodeSample(Number(i))) }
+
+// Plays a loaded sound for as long as the pad is held.
+function startSample(s) {
+  const t = ctx.currentTime
+  const src = ctx.createBufferSource(); src.buffer = s.buffer
+  const g = ctx.createGain(); env(g, t, 0.9, 0.003)
+  src.connect(g).connect(bus)
+  src.start(t)
+  voiceStarted()
+  let done = false
+  const finish = () => { if (!done) { done = true; voiceEnded() } }
+  src.onended = finish
+  return () => {
+    if (done) return
+    const now = ctx.currentTime
+    release(g, now, 0.03)
+    try { src.stop(now + 0.04) } catch (e) {}
+    finish()
+  }
+}
+
 function trigger(row, col) {
+  const custom = samples[ROWS.indexOf(row) * 4 + col]
+  if (custom && custom.buffer) return startSample(custom)
   if (row.id === "screech") return startScreech(noteFreq(row, col))
   if (row.id === "buzz") return startBuzz(noteFreq(row, col))
   if (row.id === "drums") return [playKick, playClap, playCrack, playClang][col]()
@@ -479,9 +592,13 @@ ROWS.forEach((row, r) => {
 })
 
 function updateLabels() {
-  for (const p of padEls) {
-    p.el.querySelector("b").textContent = p.row.kind === "fx" ? p.row.names[p.col] : noteName(p.col)
-  }
+  padEls.forEach((p, i) => {
+    const custom = samples[i]
+    p.el.classList.toggle("custom", Boolean(custom))
+    p.el.querySelector("b").textContent = custom
+      ? custom.name.replace(/\.[^.]+$/, "")
+      : p.row.kind === "fx" ? p.row.names[p.col] : noteName(p.col)
+  })
   document.getElementById("key").textContent = NOTE_NAMES[state.root]
   document.getElementById("oct").textContent = state.octave
   document.getElementById("bpm").textContent = state.bpm
@@ -507,6 +624,7 @@ function lift(id) {
 for (const pad of padEls) {
   pad.el.addEventListener("pointerdown", (e) => {
     e.preventDefault()
+    if (editing) return openSheet(padEls.indexOf(pad))
     pad.el.setPointerCapture(e.pointerId)
     press(pad, e.pointerId)
   })
@@ -605,6 +723,56 @@ function meterLoop() {
   requestAnimationFrame(meterLoop)
 }
 
+// ---------- Loading sounds ----------
+let editing = false
+let sheetPad = -1
+const sheetEl = document.getElementById("sheet")
+const fileInput = document.getElementById("fileInput")
+
+document.getElementById("soundsBtn").addEventListener("click", () => {
+  editing = !editing
+  document.body.classList.toggle("editing", editing)
+  document.getElementById("soundsBtn").classList.toggle("sel", editing)
+})
+
+function openSheet(index) {
+  sheetPad = index
+  const custom = samples[index]
+  document.getElementById("sheetText").textContent = custom
+    ? `This pad plays "${custom.name}".`
+    : "Load a sound file from your phone onto this pad."
+  document.getElementById("sheetReset").style.display = custom ? "" : "none"
+  sheetEl.classList.remove("hidden")
+}
+function closeSheet() { sheetEl.classList.add("hidden") }
+
+document.getElementById("sheetCancel").addEventListener("click", closeSheet)
+sheetEl.addEventListener("click", (e) => { if (e.target === sheetEl) closeSheet() })
+document.getElementById("sheetPick").addEventListener("click", () => { fileInput.value = ""; fileInput.click() })
+document.getElementById("sheetReset").addEventListener("click", async () => {
+  delete samples[sheetPad]
+  await dbRun("readwrite", (store) => store.delete(sheetPad))
+  updateLabels()
+  closeSheet()
+})
+
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0]
+  if (!file) return
+  const index = sheetPad
+  const data = await file.arrayBuffer()
+  samples[index] = { name: file.name, data }
+  try {
+    await dbRun("readwrite", (store) => store.put({ name: file.name, data }, index))
+  } catch (e) {
+    alert("Couldn't save that sound on this phone; it will work until you close the app.")
+  }
+  initAudio()
+  await decodeSample(index)
+  updateLabels()
+  closeSheet()
+})
+
 // ---------- Start screen ----------
 const startEl = document.getElementById("start")
 function hideStart() { startEl.classList.add("hidden"); wake() }
@@ -616,6 +784,7 @@ document.addEventListener("visibilitychange", () => {
 
 updateLabels()
 applyXY()
+loadSavedSamples().then(() => { if (ctx) decodeAll() })
 </script>
 </body>
 </html>
