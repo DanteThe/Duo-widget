@@ -9,10 +9,12 @@
 // every time iOS refreshes the widget the can is drawn at a slightly different
 // height and tilt, and the bubbles move up, so it drifts around over the day.
 //
-// Want a real photo? Save a picture named drpepper.png (or dr-pepper.png,
-// Dr Pepper.jpg, ...) in the Scriptable folder in the Files app, and the
-// widget floats that instead. A cut-out with a see-through background looks
-// best. The photo stays on your phone. Without a photo it draws a plain can.
+// Want a real photo? Run this script in the Scriptable app and it asks for
+// one: paste a cut-out you copied (press and hold the can in Photos → Copy),
+// or choose a picture from Photos or Files. It keeps its own copy, so the
+// widget always finds it. You can also save a picture with "pepper" in its
+// name in the Scriptable folder in the Files app. The photo stays on your
+// phone. Without a photo it draws a plain can.
 //
 // Battery: the picture is drawn once per refresh (a few milliseconds of work),
 // with no internet, location or sensors. Refreshes are requested every
@@ -23,6 +25,8 @@ const REFRESH_MINUTES = 30
 // dr-pepper.jpg, my pepper photo.webp or IMG_1234 pepper.heic.
 const PHOTO_PATTERN = /pepper/i
 const PICTURE_TYPES = /\.(png|jpe?g|heic|heif|webp|gif|tiff?)$/i
+// The picture chosen in the app is saved here, in Scriptable's on-device folder.
+const SAVED_PHOTO = "drpepper-widget-photo.png"
 
 // Colours
 const BG_TOP = "#2e0508"
@@ -200,6 +204,15 @@ function drawBubbles(ctx) {
 // Looks for the photo in the Scriptable folder (iCloud first, then on-device).
 // When run in the app, it logs what it found to help with setup.
 async function loadPhoto() {
+  const local = FileManager.local()
+  const savedPath = local.joinPath(local.documentsDirectory(), SAVED_PHOTO)
+  if (local.fileExists(savedPath)) {
+    const saved = local.readImage(savedPath)
+    if (saved) {
+      log("Using the picture you chose in the app")
+      return saved
+    }
+  }
   const places = []
   try { places.push(["iCloud Drive → Scriptable", FileManager.iCloud()]) } catch (e) {}
   places.push(["On My iPhone → Scriptable", FileManager.local()])
@@ -271,7 +284,50 @@ function buildWidget(photo) {
   return widget
 }
 
-const widget = buildWidget(await loadPhoto())
+// When run in the app, asks for a picture and saves it for the widget.
+async function choosePhoto(current) {
+  const alert = new Alert()
+  alert.title = "Dr Pepper picture"
+  alert.message = current
+    ? "The widget already has a picture. Pick a new one?"
+    : "Pick the picture for the widget. Tip: press and hold the can in Photos, tap Copy, then come back and choose Paste."
+  alert.addAction("Paste copied picture")
+  alert.addAction("Choose from Photos")
+  alert.addAction("Choose from Files")
+  const local = FileManager.local()
+  const savedPath = local.joinPath(local.documentsDirectory(), SAVED_PHOTO)
+  if (local.fileExists(savedPath)) alert.addAction("Remove picture (draw the can)")
+  alert.addCancelAction(current ? "Keep current picture" : "Not now")
+  const choice = await alert.presentSheet()
+  if (choice === -1) return current
+
+  let picked = null
+  try {
+    if (choice === 0) {
+      picked = Pasteboard.pasteImage()
+      if (!picked) log("Nothing to paste: copy a picture first")
+    } else if (choice === 1) {
+      picked = await Photo.fromLibrary()
+    } else if (choice === 2) {
+      const [path] = await DocumentPicker.open(["public.image"])
+      picked = local.readImage(path)
+    } else if (choice === 3) {
+      if (local.fileExists(savedPath)) local.remove(savedPath)
+      log("Removed the picture")
+      return null
+    }
+  } catch (e) {
+    log(`No picture picked: ${e}`)
+  }
+  if (!picked) return current
+  local.writeImage(savedPath, picked)
+  log("Saved the picture for the widget")
+  return picked
+}
+
+let photo = await loadPhoto()
+if (!config.runsInWidget && config.runsInApp) photo = await choosePhoto(photo)
+const widget = buildWidget(photo)
 if (config.runsInWidget) {
   Script.setWidget(widget)
 } else {

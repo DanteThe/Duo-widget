@@ -185,10 +185,15 @@ as the peanut butter cup widget. Without a photo it draws a plain burgundy can
 
 ## Use a real photo
 
-1. In **Photos**, press and hold on the can or bottle until it lights up, then
-   tap **Share** → **Save to Files**.
-2. Save it in **iCloud Drive → Scriptable** (or **On My iPhone → Scriptable**)
-   and name it **drpepper.png**. Names like `Dr Pepper.png` or
-   `dr-pepper.jpg` work too: any picture with "pepper" in its name.
+The easiest way: let the script ask for it.
 
-Run the script in Scriptable to check: the log says which picture it's using.
+1. In **Photos**, press and hold on the can or bottle until it lights up, then
+   tap **Copy**.
+2. In Scriptable, tap ▶︎ on **Dr Pepper** and choose **Paste copied picture**.
+   (Or choose **Choose from Photos** / **Choose from Files**.)
+
+The script keeps its own copy, so the widget always finds it. Run the script
+again any time to replace or remove the picture.
+
+You can also save a picture with "pepper" anywhere in its name (like
+`Dr. Pepper.png`) in the **Scriptable** folder in the Files app.
