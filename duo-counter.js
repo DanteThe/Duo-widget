@@ -171,8 +171,11 @@ rollDay(state)
 
 if (config.runsInWidget) {
   Script.setWidget(buildWidget(state))
-} else if (args.shortcutParameter != null) {
-  const command = String(args.shortcutParameter).trim().toLowerCase()
+} else if (args.shortcutParameter != null || args.plainTexts.length > 0) {
+  // Accept the command from either the Parameter field or the Texts list,
+  // since some Shortcuts versions open a file picker for Parameter.
+  const raw = args.shortcutParameter != null ? args.shortcutParameter : args.plainTexts[0]
+  const command = String(raw).trim().toLowerCase()
   Script.setShortcutOutput(handleCommand(command, state))
 } else {
   // Opened directly in the Scriptable app: show a preview and the measured

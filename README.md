@@ -33,8 +33,10 @@ data anywhere.
 
 1. Open **Shortcuts** → **+**.
 2. Add the action **Scriptable → Run Script**.
-3. Choose **Duo Counter**, tap **Show More**, and set **Parameter** to `check`.
-4. Turn **Run In App** off.
+3. Choose **Duo Counter**, tap the **⌄** arrow, and under **Texts** tap
+   **Add New Item** and type `check`. (Typing `check` into **Parameter**
+   also works, if your version shows a keyboard for it.)
+4. Turn **Run In App** and **Show When Run** off.
 5. Name the shortcut **Count Wide Screen**.
 
 `check` only counts when the wide screen is showing *and* it wasn't showing the
