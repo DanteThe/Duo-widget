@@ -18,7 +18,8 @@
 // 30 minutes, and iOS may space them out further.
 
 const REFRESH_MINUTES = 30
-const PHOTO_NAMES = ["cup.png", "cup.jpg", "cup.jpeg"]
+// Any file named like cup.png, Cup.PNG, cup.png.png, cup.jpg or cup.heic.
+const PHOTO_PATTERN = /^cup(\.[a-z]+)*\.(png|jpe?g|heic)$/i
 
 // Colours
 const BG_TOP = "#7a1424"
@@ -168,21 +169,32 @@ function drawCrumbs(ctx) {
 }
 
 // Looks for the photo in the Scriptable folder (iCloud first, then on-device).
+// When run in the app, it logs what it found to help with setup.
 async function loadPhoto() {
-  const managers = []
-  try { managers.push(FileManager.iCloud()) } catch (e) {}
-  managers.push(FileManager.local())
-  for (const fm of managers) {
-    for (const name of PHOTO_NAMES) {
-      const path = fm.joinPath(fm.documentsDirectory(), name)
-      if (!fm.fileExists(path)) continue
-      try {
-        if (fm.isFileStoredIniCloud(path)) await fm.downloadFileFromiCloud(path)
-        const image = fm.readImage(path)
-        if (image) return image
-      } catch (e) {}
+  const places = []
+  try { places.push(["iCloud Drive → Scriptable", FileManager.iCloud()]) } catch (e) {}
+  places.push(["On My iPhone → Scriptable", FileManager.local()])
+  for (const [label, fm] of places) {
+    let names = []
+    try { names = fm.listContents(fm.documentsDirectory()) } catch (e) {}
+    const images = names.filter((n) => /\.(png|jpe?g|heic)$/i.test(n))
+    log(`${label}: ${images.length ? images.join(", ") : "no pictures"}`)
+    const name = images.find((n) => PHOTO_PATTERN.test(n))
+    if (!name) continue
+    const path = fm.joinPath(fm.documentsDirectory(), name)
+    try {
+      if (fm.isFileStoredIniCloud(path)) await fm.downloadFileFromiCloud(path)
+      const image = fm.readImage(path)
+      if (image) {
+        log(`Using ${name}`)
+        return image
+      }
+      log(`Found ${name} but couldn't open it as a picture`)
+    } catch (e) {
+      log(`Found ${name} but couldn't open it: ${e}`)
     }
   }
+  log("No cup photo found, drawing the cup instead")
   return null
 }
 

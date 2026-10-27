@@ -128,6 +128,11 @@ The widget picks it up on its next refresh. Delete or rename the file to go
 back to the drawn cup. The photo stays on your phone and is not part of this
 repo.
 
+**Photo not showing?** Open the script in Scriptable and tap ▶︎. The log at
+the bottom lists the pictures it can see in each Scriptable folder and which
+one it's using. Names like `cup.png`, `Cup.PNG`, `cup.png.png`, `cup.jpg` and
+`cup.heic` all work.
+
 Widgets can't rotate pictures, so a photo floats by moving up and down,
 drifting sideways and growing slightly as it rises. It doesn't tilt like the
 drawn cup.
