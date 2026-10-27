@@ -165,3 +165,30 @@ runs it). The mirrored copy is saved and reused, and it's remade automatically
 if you replace `cup.png`.
 
 Mirroring flips everything, so any writing on the wrapper reads backwards.
+
+---
+
+# Dr Pepper widget
+
+A soda can floating among rising bubbles, on the same dark maroon background
+as the peanut butter cup widget. Without a photo it draws a plain burgundy can
+(no logo); add your own photo to show the real thing.
+
+![Dr Pepper widget preview](images/dr-pepper-preview.png)
+
+## Setup
+
+1. In Scriptable, tap **+**, paste in everything from
+   [`dr-pepper.js`](dr-pepper.js), name it **Dr Pepper**, and tap **Done**.
+2. Add a Scriptable widget to the home screen and set its **Script** to
+   **Dr Pepper**.
+
+## Use a real photo
+
+1. In **Photos**, press and hold on the can or bottle until it lights up, then
+   tap **Share** → **Save to Files**.
+2. Save it in **iCloud Drive → Scriptable** (or **On My iPhone → Scriptable**)
+   and name it **drpepper.png**. Names like `Dr Pepper.png` or
+   `dr-pepper.jpg` work too.
+
+Run the script in Scriptable to check: the log says which picture it's using.
