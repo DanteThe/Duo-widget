@@ -33,9 +33,9 @@ data anywhere.
 
 1. Open **Shortcuts** → **+**.
 2. Add the action **Scriptable → Run Script**.
-3. Choose **Duo Counter**, tap the **⌄** arrow, and under **Texts** tap
-   **Add New Item** and type `check`. (Typing `check` into **Parameter**
-   also works, if your version shows a keyboard for it.)
+3. Choose **Duo Counter**. You don't need to fill in anything else: with
+   **Parameter** and **Texts** left empty, it runs `check`. (To use `add`
+   or `reset`, add it under **Texts** → **Add New Item**.)
 4. Turn **Run In App** and **Show When Run** off.
 5. Name the shortcut **Count Wide Screen**.
 
@@ -70,7 +70,7 @@ It also works as a lock screen widget (circular, rectangular, or inline).
 
 | Parameter | What it does |
 |-----------|--------------|
-| `check`   | Counts +1 if the wide screen just became visible |
+| `check`   | Counts +1 if the wide screen just became visible (the default when nothing is filled in) |
 | `add`     | Always counts +1 (handy for a manual button) |
 | `reset`   | Sets the count back to 0 |
 
