@@ -83,3 +83,32 @@ if you want to see the number.
   but the widget may take a few minutes to show the new number.
 - If the wide screen isn't detected correctly, open the script and change
   `WIDE_RATIO_MAX` near the top (the log from step 1.5 shows your ratio).
+
+---
+
+# Peanut Butter Cup widget
+
+A second, just-for-fun widget: a 3D peanut butter cup floating over an orange
+background.
+
+![Peanut butter cup widget preview](images/peanut-butter-cup-preview.png)
+
+iOS widgets are still pictures, so the cup can't move continuously. Each time
+iOS refreshes the widget, the cup is drawn at a slightly different height, tilt
+and turn, so it drifts around through the day.
+
+**Battery:** it draws one small picture per refresh, with no internet, location
+or sensors, and asks for a refresh only every 30 minutes (iOS may wait longer).
+You can change `REFRESH_MINUTES` near the top of the script.
+
+## Setup
+
+1. In Scriptable, tap **+**, paste in everything from
+   [`peanut-butter-cup.js`](peanut-butter-cup.js), name it **Peanut Butter Cup**,
+   and tap **Done**.
+2. Press and hold the home screen → **Edit** → **Add Widget** → **Scriptable**,
+   pick **Small** or **Medium**, and add it.
+3. Press and hold the widget → **Edit Widget** → set **Script** to
+   **Peanut Butter Cup**.
+
+No Shortcut is needed for this one.
