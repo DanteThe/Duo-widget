@@ -136,3 +136,35 @@ one it's using. Names like `cup.png`, `Cup.PNG`, `cup.png.png`, `cup.jpg` and
 Widgets can't rotate pictures, so a photo floats by moving up and down,
 drifting sideways and growing slightly as it rises. It doesn't tilt like the
 drawn cup.
+
+---
+
+# Peanut Butter Cup (Flipped) widget
+
+A separate copy of the peanut butter cup widget that faces the other way: the
+cup tilts, turns, drifts and is lit from the opposite side, and the crumbs are
+mirrored. Use it on its own or next to the original for a matching pair.
+
+![Original (top) and flipped (bottom)](images/peanut-butter-cup-flipped-preview.png)
+
+## Setup
+
+1. In Scriptable, tap **+**, paste in everything from
+   [`peanut-butter-cup-flipped.js`](peanut-butter-cup-flipped.js), name it
+   **Peanut Butter Cup Flipped**, and tap **Done**.
+2. Add a Scriptable widget to the home screen and set its **Script** to
+   **Peanut Butter Cup Flipped**.
+
+## Flipping your photo
+
+Widgets can't mirror pictures, so make a flipped copy once:
+
+1. In **Photos**, open your cup photo → **Edit** → **Crop** → tap the flip
+   button (the triangle icon in the top corner) → **Done**. Tip: duplicate the
+   photo first (**⋯** → **Duplicate**) if you want to keep the original as is.
+2. Press and hold the cup until it lights up → **Share** → **Save to Files**.
+3. Save it in the same **Scriptable** folder as `cup.png` and name it
+   **cup-flipped.png**.
+
+If there's no `cup-flipped.png`, this widget uses `cup.png` unflipped, and
+the log in Scriptable reminds you to add the flipped copy.
