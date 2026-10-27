@@ -26,3 +26,5 @@ dr_pepper.*
 *pepper*.heic
 *pepper*.webp
 *Pepper*.*
+# Preview images in the repo are fine
+!images/*
