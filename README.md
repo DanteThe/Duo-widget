@@ -157,14 +157,11 @@ mirrored. Use it on its own or next to the original for a matching pair.
 
 ## Flipping your photo
 
-Widgets can't mirror pictures, so make a flipped copy once:
+Nothing extra to do: this widget uses the same `cup.png` as the original and
+mirrors it for you. Widgets themselves can't mirror pictures, so the
+mirroring happens the first time the script runs in the Scriptable app. Either
+tap ▶︎ on the script in Scriptable, or just tap the widget once (that opens and
+runs it). The mirrored copy is saved and reused, and it's remade automatically
+if you replace `cup.png`.
 
-1. In **Photos**, open your cup photo → **Edit** → **Crop** → tap the flip
-   button (the triangle icon in the top corner) → **Done**. Tip: duplicate the
-   photo first (**⋯** → **Duplicate**) if you want to keep the original as is.
-2. Press and hold the cup until it lights up → **Share** → **Save to Files**.
-3. Save it in the same **Scriptable** folder as `cup.png` and name it
-   **cup-flipped.png**.
-
-If there's no `cup-flipped.png`, this widget uses `cup.png` unflipped, and
-the log in Scriptable reminds you to add the flipped copy.
+Mirroring flips everything, so any writing on the wrapper reads backwards.

@@ -9,22 +9,24 @@
 // every time iOS refreshes the widget the cup is drawn at a slightly different
 // height, tilt and turn, so it drifts around over the day.
 //
-// Want a real photo? Widgets can't flip pictures, so save a mirrored copy
-// named cup-flipped.png in the Scriptable folder in the Files app (flip it in
-// the Photos app first). If there's no flipped copy, cup.png is used as is.
-// The photo stays on your phone.
+// Want a real photo? Save it as cup.png in the Scriptable folder in the Files
+// app (the same photo the original widget uses). This script mirrors it for
+// you the first time it runs in the Scriptable app (or when you tap the
+// widget) and keeps the mirrored copy, so the widget itself does no extra
+// work. The photo stays on your phone.
 //
 // Battery: the picture is drawn once per refresh (a few milliseconds of work),
 // with no internet, location or sensors. Refreshes are requested every
 // 30 minutes, and iOS may space them out further.
 
 const REFRESH_MINUTES = 30
-// Any file named like cup-flipped.png, Cup Flipped.PNG or cup_flipped.jpg,
-// falling back to the regular cup.png.
-const PHOTO_PATTERNS = [
-  /^cup[-_ ]?flipped(\.[a-z]+)*\.(png|jpe?g|heic)$/i,
-  /^cup(\.[a-z]+)*\.(png|jpe?g|heic)$/i,
-]
+// Any file named like cup.png, Cup.PNG, cup.png.png, cup.jpg or cup.heic.
+const PHOTO_PATTERN = /^cup(\.[a-z]+)*\.(png|jpe?g|heic)$/i
+// The mirrored copy is kept in Scriptable's on-device folder.
+const FLIPPED_FILE = "cup-mirrored-cache.png"
+const FLIPPED_INFO = "cup-mirrored-cache.json"
+// Big photos are shrunk when mirrored so the widget stays light on memory.
+const FLIPPED_MAX_SIDE = 900
 
 // Colours
 const BG_TOP = "#2e0508"
@@ -174,9 +176,9 @@ function drawCrumbs(ctx) {
   }
 }
 
-// Looks for the photo in the Scriptable folder (iCloud first, then on-device).
+// Looks for cup.png in the Scriptable folder (iCloud first, then on-device).
 // When run in the app, it logs what it found to help with setup.
-async function loadPhoto() {
+async function findPhoto() {
   const places = []
   try { places.push(["iCloud Drive → Scriptable", FileManager.iCloud()]) } catch (e) {}
   places.push(["On My iPhone → Scriptable", FileManager.local()])
@@ -185,17 +187,15 @@ async function loadPhoto() {
     try { names = fm.listContents(fm.documentsDirectory()) } catch (e) {}
     const images = names.filter((n) => /\.(png|jpe?g|heic)$/i.test(n))
     log(`${label}: ${images.length ? images.join(", ") : "no pictures"}`)
-    const pattern = PHOTO_PATTERNS.find((p) => images.some((n) => p.test(n)))
-    const name = pattern && images.find((n) => pattern.test(n))
+    const name = images.find((n) => PHOTO_PATTERN.test(n))
     if (!name) continue
     const path = fm.joinPath(fm.documentsDirectory(), name)
     try {
       if (fm.isFileStoredIniCloud(path)) await fm.downloadFileFromiCloud(path)
       const image = fm.readImage(path)
       if (image) {
-        log(`Using ${name}`)
-        if (pattern !== PHOTO_PATTERNS[0]) log("Tip: save a mirrored copy as cup-flipped.png so the photo faces the other way")
-        return image
+        log(`Found ${name}`)
+        return { image, name, changed: fm.modificationDate(path).getTime() }
       }
       log(`Found ${name} but couldn't open it as a picture`)
     } catch (e) {
@@ -204,6 +204,68 @@ async function loadPhoto() {
   }
   log("No cup photo found, drawing the cup instead")
   return null
+}
+
+// Mirrors a picture left-to-right. Scriptable can't do this directly, so it
+// uses a hidden web view, which only works when running in the app.
+async function mirror(image) {
+  const base64 = Data.fromPNG(image).toBase64String()
+  const web = new WebView()
+  await web.loadHTML("<canvas id='c'></canvas>")
+  const result = await web.evaluateJavaScript(`
+    const img = new Image()
+    img.onload = () => {
+      const k = Math.min(1, ${FLIPPED_MAX_SIDE} / Math.max(img.width, img.height))
+      const c = document.getElementById("c")
+      c.width = Math.round(img.width * k)
+      c.height = Math.round(img.height * k)
+      const g = c.getContext("2d")
+      g.translate(c.width, 0)
+      g.scale(-1, 1)
+      g.drawImage(img, 0, 0, c.width, c.height)
+      completion(c.toDataURL("image/png").split(",")[1])
+    }
+    img.onerror = () => completion(null)
+    img.src = "data:image/png;base64,${base64}"
+  `, true)
+  if (!result) throw new Error("the picture couldn't be read")
+  return Image.fromData(Data.fromBase64String(result))
+}
+
+// Returns the mirrored photo, making (or remaking) it when cup.png is new or
+// has changed. The widget can't mirror, so until the script has run once in
+// the app it shows the photo unmirrored.
+async function loadPhoto() {
+  const source = await findPhoto()
+  if (!source) return null
+  const fm = FileManager.local()
+  const dir = fm.documentsDirectory()
+  const cachePath = fm.joinPath(dir, FLIPPED_FILE)
+  const infoPath = fm.joinPath(dir, FLIPPED_INFO)
+  let info = null
+  try { info = JSON.parse(fm.readString(infoPath)) } catch (e) {}
+  const upToDate = info && info.name === source.name && info.changed === source.changed && fm.fileExists(cachePath)
+  if (upToDate) {
+    const cached = fm.readImage(cachePath)
+    if (cached) {
+      log("Using the mirrored copy")
+      return cached
+    }
+  }
+  if (config.runsInWidget) {
+    log("Not mirrored yet: tap the widget or run the script in Scriptable once")
+    return source.image
+  }
+  try {
+    const flipped = await mirror(source.image)
+    fm.writeImage(cachePath, flipped)
+    fm.writeString(infoPath, JSON.stringify({ name: source.name, changed: source.changed }))
+    log("Mirrored the photo and saved the copy")
+    return flipped
+  } catch (e) {
+    log(`Couldn't mirror the photo: ${e}`)
+    return source.image
+  }
 }
 
 function drawPhoto(ctx, photo) {
