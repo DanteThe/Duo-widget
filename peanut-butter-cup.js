@@ -21,8 +21,8 @@ const REFRESH_MINUTES = 30
 const PHOTO_NAMES = ["cup.png", "cup.jpg", "cup.jpeg"]
 
 // Colours
-const BG_TOP = "#ff9a2e"
-const BG_BOTTOM = "#e8590c"
+const BG_TOP = "#7a1424"
+const BG_BOTTOM = "#3d0610"
 const CHOCOLATE = [112, 64, 33]     // side of the cup
 const TOP_RIM = "#4a2914"
 const TOP_FILL = "#6b3b1d"
@@ -101,7 +101,7 @@ function drawShadow(ctx) {
     const ry = rx * 0.16
     const path = new Path()
     path.addEllipse(new Rect(cx - rx, groundY - ry, rx * 2, ry * 2))
-    fill(ctx, path, new Color("#5a1f00", 0.07 + (1 - lift) * 0.03))
+    fill(ctx, path, new Color("#000000", 0.1 + (1 - lift) * 0.04))
   }
 }
 
