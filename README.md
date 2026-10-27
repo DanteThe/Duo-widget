@@ -112,3 +112,22 @@ You can change `REFRESH_MINUTES` near the top of the script.
    **Peanut Butter Cup**.
 
 No Shortcut is needed for this one.
+
+## Use a real photo
+
+You can float your own photo instead of the drawn cup:
+
+1. Take a photo of a peanut butter cup (or find one in your Photos).
+2. Open it in **Photos** and press and hold on the cup until it lights up,
+   then tap **Share** → **Save to Files**. This saves just the cup with a
+   see-through background.
+3. Save it into **iCloud Drive → Scriptable** (or **On My iPhone → Scriptable**)
+   and rename it to **cup.png**.
+
+The widget picks it up on its next refresh. Delete or rename the file to go
+back to the drawn cup. The photo stays on your phone and is not part of this
+repo.
+
+Widgets can't rotate pictures, so a photo floats by moving up and down,
+drifting sideways and growing slightly as it rises. It doesn't tilt like the
+drawn cup.

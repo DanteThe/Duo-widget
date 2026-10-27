@@ -3,3 +3,8 @@
 .env
 .env.*
 node_modules/
+
+# Personal photos for the peanut butter cup widget stay on the phone
+cup.png
+cup.jpg
+cup.jpeg

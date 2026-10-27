@@ -8,11 +8,17 @@
 // every time iOS refreshes the widget the cup is drawn at a slightly different
 // height, tilt and turn, so it drifts around over the day.
 //
+// Want a real photo instead of the drawn cup? Save a picture named
+// cup.png (or cup.jpg) in the Scriptable folder in the Files app, and the
+// widget floats that instead. A cut-out with a see-through background looks
+// best. The photo stays on your phone.
+//
 // Battery: the picture is drawn once per refresh (a few milliseconds of work),
 // with no internet, location or sensors. Refreshes are requested every
 // 30 minutes, and iOS may space them out further.
 
 const REFRESH_MINUTES = 30
+const PHOTO_NAMES = ["cup.png", "cup.jpg", "cup.jpeg"]
 
 // Colours
 const BG_TOP = "#ff9a2e"
@@ -161,19 +167,56 @@ function drawCrumbs(ctx) {
   }
 }
 
-function drawCup() {
+// Looks for the photo in the Scriptable folder (iCloud first, then on-device).
+async function loadPhoto() {
+  const managers = []
+  try { managers.push(FileManager.iCloud()) } catch (e) {}
+  managers.push(FileManager.local())
+  for (const fm of managers) {
+    for (const name of PHOTO_NAMES) {
+      const path = fm.joinPath(fm.documentsDirectory(), name)
+      if (!fm.fileExists(path)) continue
+      try {
+        if (fm.isFileStoredIniCloud(path)) await fm.downloadFileFromiCloud(path)
+        const image = fm.readImage(path)
+        if (image) return image
+      } catch (e) {}
+    }
+  }
+  return null
+}
+
+function drawPhoto(ctx, photo) {
+  // Widgets can't rotate images, so the photo floats by moving up and down,
+  // drifting sideways and growing slightly as it rises.
+  const scale = 1 + (-floatY / 14) * 0.04
+  const maxW = 230 * scale
+  const maxH = 190 * scale
+  const fit = Math.min(maxW / photo.size.width, maxH / photo.size.height)
+  const w = photo.size.width * fit
+  const h = photo.size.height * fit
+  const x = cx - w / 2 + Math.sin(t / 59) * 6
+  const y = 140 + floatY - h / 2
+  ctx.drawImageInRect(photo, new Rect(x, y, w, h))
+}
+
+function drawCup(photo) {
   const ctx = new DrawContext()
   ctx.size = new Size(W, H)
   ctx.opaque = false
   ctx.respectScreenScale = true
   drawShadow(ctx)
   drawCrumbs(ctx)
-  drawSide(ctx)
-  drawTop(ctx)
+  if (photo) {
+    drawPhoto(ctx, photo)
+  } else {
+    drawSide(ctx)
+    drawTop(ctx)
+  }
   return ctx.getImage()
 }
 
-function buildWidget() {
+function buildWidget(photo) {
   const widget = new ListWidget()
   const bg = new LinearGradient()
   bg.colors = [new Color(BG_TOP), new Color(BG_BOTTOM)]
@@ -182,13 +225,13 @@ function buildWidget() {
   widget.setPadding(0, 0, 0, 0)
   widget.refreshAfterDate = new Date(Date.now() + REFRESH_MINUTES * 60 * 1000)
 
-  const image = widget.addImage(drawCup())
+  const image = widget.addImage(drawCup(photo))
   image.centerAlignImage()
   image.applyFillingContentMode()
   return widget
 }
 
-const widget = buildWidget()
+const widget = buildWidget(await loadPhoto())
 if (config.runsInWidget) {
   Script.setWidget(widget)
 } else {
